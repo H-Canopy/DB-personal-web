@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -304,6 +303,36 @@
   @media (max-width: 768px) {
     .allies { padding: 80px 24px; } .allies-grid { grid-template-columns: 1fr; gap: 40px; }
   }
+
+  /* ==================== ALLIES FLOATING CARD ==================== */
+  .allies-popup-card {
+    position: fixed;
+    width: min(76vw, 400px);
+    background: #111; border-radius: 18px; overflow: hidden;
+    border: 1px solid rgba(197,168,128,0.22);
+    box-shadow: 0 40px 80px rgba(0,0,0,0.5), 0 0 0 1px rgba(197,168,128,0.08) inset;
+    pointer-events: none;
+    opacity: 0;
+    will-change: transform, left, top;
+  }
+  .allies-popup-card.show {
+    opacity: 1;
+    transition: opacity 0.25s ease;
+  }
+  .allies-popup-card.hide {
+    opacity: 0;
+    transition: opacity 0.35s ease;
+  }
+  .allies-popup-imgwrap {
+    position: relative; width: 100%; aspect-ratio: 9/16; overflow: hidden;
+    background: #0d0c0a;
+  }
+  .allies-popup-imgwrap img {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    object-fit: cover; opacity: 0;
+    transition: opacity 0.35s ease;
+  }
+  .allies-popup-imgwrap img.active { opacity: 1; }
 
   /* ==================== PROJECTS ==================== */
   .projects {
@@ -913,6 +942,14 @@
       </div>
     </div>
   </div>
+
+    <!-- 盟友圈浮动卡片 -->
+    <div class="allies-popup-card" id="alliesPopupCard">
+      <div class="allies-popup-imgwrap">
+        <img id="popupImg1" src="popup_img1.jpg" alt="邓博文 · 实战项目">
+        <img id="popupImg2" src="popup_img2.png" alt="邓博文 · AI探索">
+      </div>
+    </div>
 </section>
 
 <!-- ==================== PROJECTS ==================== -->
@@ -1489,6 +1526,103 @@
     }
     randomFlicker();
   })();
+
+// ===== ALLIES FLOATING CARD =====
+(function() {
+  var card = document.getElementById('alliesPopupCard');
+  if (!card) return;
+
+  var img1 = document.getElementById('popupImg1');
+  var img2 = document.getElementById('popupImg2');
+  var isShowing = false;
+  var hideTimer = null;
+  var switchTimer = null;
+
+  var mouseX = window.innerWidth / 2;
+  var mouseY = window.innerHeight / 2;
+  var currentX = mouseX;
+  var currentY = mouseY;
+
+  window.addEventListener('mousemove', function(e) {
+    mouseX = e.clientX;
+    mouseY = e.clientY;
+  });
+
+  function resetImages() {
+    if (img1) img1.classList.remove('active');
+    if (img2) img2.classList.remove('active');
+  }
+
+  function showPopup() {
+    if (isShowing) return;
+    isShowing = true;
+    if (hideTimer) { clearTimeout(hideTimer); hideTimer = null; }
+    if (switchTimer) { clearTimeout(switchTimer); switchTimer = null; }
+    resetImages();
+    currentX = mouseX;
+    currentY = mouseY;
+    card.style.left = currentX + 'px';
+    card.style.top = currentY + 'px';
+    card.style.transform = 'translate(-50%, -50%) rotate(-20deg) scale(0.85)';
+    card.classList.add('show');
+    card.classList.remove('hide');
+    requestAnimationFrame(function() {
+      card.style.transition = 'transform 0.45s cubic-bezier(0.16,1,0.3,1)';
+      card.style.transform = 'translate(-50%, -50%) rotate(0deg) scale(1)';
+    });
+    if (img1) img1.classList.add('active');
+    switchTimer = setTimeout(function() {
+      if (img1) img1.classList.remove('active');
+      if (img2) img2.classList.add('active');
+    }, 700);
+    hideTimer = setTimeout(function() {
+      hidePopup();
+    }, 1400);
+  }
+
+  function hidePopup() {
+    if (!isShowing) return;
+    isShowing = false;
+    if (hideTimer) { clearTimeout(hideTimer); hideTimer = null; }
+    if (switchTimer) { clearTimeout(switchTimer); switchTimer = null; }
+    resetImages();
+    card.classList.remove('show');
+    card.classList.add('hide');
+    setTimeout(function() {
+      if (!isShowing) { card.style.left = '-999px'; card.style.top = '-999px'; }
+    }, 400);
+  }
+
+  function lerpLoop() {
+    if (isShowing) {
+      currentX += (mouseX - currentX) * 0.12;
+      currentY += (mouseY - currentY) * 0.12;
+      card.style.left = currentX + 'px';
+      card.style.top = currentY + 'px';
+    }
+    requestAnimationFrame(lerpLoop);
+  }
+  lerpLoop();
+
+  var alliesSection = document.getElementById('allies');
+  if (alliesSection) {
+    var observer = new IntersectionObserver(function(entries) {
+      entries.forEach(function(e) {
+        if (e.isIntersecting && !isShowing) {
+          showPopup();
+        }
+      });
+    }, { threshold: 0.25 });
+    observer.observe(alliesSection);
+  }
+
+  document.querySelectorAll('.ally-name').forEach(function(el) {
+    el.addEventListener('click', function() {
+      if (isShowing) hidePopup();
+      setTimeout(function() { showPopup(); }, 200);
+    });
+  });
+})();
 </script>
 </body>
 </html>
